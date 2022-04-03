@@ -11,8 +11,7 @@ from dash_extensions import WebSocket
 WS_HOST = "localhost"
 WS_PORT = 8765
 
-# DataFrame with tickers prices history
-df = pd.DataFrame()
+# Tickers
 tickets = [f'ticker_{i:02}' for i in range(100)]
 
 # Create app layout
@@ -42,6 +41,7 @@ app.layout = html.Div(
                 )
             ]
         ),
+        dcc.Store(id='df'),
         WebSocket(
             url=f"ws://{WS_HOST}:{WS_PORT}", 
             id="ws"
@@ -50,13 +50,17 @@ app.layout = html.Div(
 )
 
 @app.callback(
-    Output("graph", "figure"), 
+    [
+        Output("graph", "figure"),
+        Output("df", "data")
+    ], 
     [
         Input("ws", "message"),
         Input("trade-instrument-filter", "value")
-    ]
+    ],
+    State("df", "data")
 )
-def update_graph(msg: str, filter: str) -> go.Figure:
+def update_graph(msg: str, filter: str, dfdf) -> go.Figure:
     """Update visualization.
 
     Keyword arguments:
@@ -65,10 +69,11 @@ def update_graph(msg: str, filter: str) -> go.Figure:
 
     Return new figure.
     """
-    global df
+
+    dfdf = pd.DataFrame.from_dict(dfdf)
 
     # getting new data if possible
-    if df.empty or not msg['timeStamp'] == max(df['ts']):
+    if dfdf.empty or not msg['timeStamp'] == max(dfdf['ts']):
         new_tickers = json.loads(msg["data"])
         added_df = pd.DataFrame(
             {
@@ -77,16 +82,18 @@ def update_graph(msg: str, filter: str) -> go.Figure:
             }
         )
         added_df['ts'] = msg['timeStamp']
-        df = pd.concat([df, added_df], ignore_index=True)
+        dfdf = pd.concat([dfdf, added_df], ignore_index=True)
 
     # updating figure with new data or other filter
-    current_df = df[df.ticker == filter]
-    return go.Figure(
+    current_df = dfdf[dfdf.ticker == filter]
+    figure = go.Figure(
         data=go.Scatter(
             x=current_df.ts, 
             y=current_df.price
         )
     )
+
+    return figure, dfdf.to_dict()
 
 if __name__ == "__main__":
     app.run_server(debug=True, port=5000)

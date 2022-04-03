@@ -34,7 +34,7 @@ def init_tickets() -> dict:
     """Initialization 100 tickers prices."""
     return { f'ticker_{i:02}':0 for i in range(100) }
 
-async def on_connect(ws: websockets.server) -> None:
+async def on_connect(ws: websockets.WebSocketServer) -> None:
     """Asynchronous handler function - waiting clients and infinite cycle for generation new prices and sending it to clients.
 
     Keyword arguments:

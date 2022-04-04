@@ -5,6 +5,7 @@ Then server updates prices and send it to client once per second.
 """
 
 import json
+import signal
 import asyncio
 import logging
 from random import random
@@ -13,8 +14,8 @@ import websockets
 
 logging.basicConfig(level=logging.INFO)
 
-WS_HOST = "localhost"
-WS_PORT = 8765
+WS_HOST = '' #"localhost"
+WS_PORT = 8764
 
 def generate_movement() -> int:
     """Generate price changing."""
@@ -68,3 +69,15 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+else:
+    loop = asyncio.get_event_loop()
+
+    start_server = websockets.serve(on_connect, WS_HOST, WS_PORT)
+    server = loop.run_until_complete(start_server)
+
+    stop = asyncio.Future()
+    loop.add_signal_handler(signal.SIGTERM, stop.set_result, None)
+    loop.run_until_complete(stop)
+
+    server.close()
+    loop.run_until_complete(server.wait_closed())

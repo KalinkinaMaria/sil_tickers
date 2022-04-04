@@ -16,6 +16,9 @@ tickets = [f'ticker_{i:02}' for i in range(100)]
 
 # Create app layout
 app = Dash(prevent_initial_callbacks=True)
+
+server = app.server
+
 app.layout = html.Div(
     [
         html.Div(
